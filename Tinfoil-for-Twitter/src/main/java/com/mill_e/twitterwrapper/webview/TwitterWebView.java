@@ -33,14 +33,14 @@ public class TwitterWebView extends WebView {
 
     // Constants, default values for this WebView's configuration
     final boolean DEFAULT_JS_ENABLED = true;
-    final WebSettings.PluginState DEFAULT_PLUGIN_STATE = WebSettings.PluginState.ON;
+    final WebSettings.PluginState DEFAULT_PLUGIN_STATE = WebSettings.PluginState.ON_DEMAND;
     final boolean DEFAULT_SUPPORT_ZOOM = true;
     final boolean DEFAULT_SAVE_FORM_DATA = false;
     final boolean DEFAULT_SAVE_PASSWORD = false;
     final boolean DEFAULT_DOM_STORAGE_ENABLED = true;
     final boolean DEFAULT_ALLOW_GEOLOCATION = false;
     final boolean DEFAULT_ALLOW_FILE_UPLOAD = true;
-    final boolean DEFAULT_WIDE_VIEWPORT = false;
+    final boolean DEFAULT_WIDE_VIEWPORT = true;
     final boolean DEFAULT_LOAD_WITH_OVERVIEW_MODE = true;
     final int DEFAULT_CACHE_MODE = WebSettings.LOAD_DEFAULT;
     final WebSettings.RenderPriority DEFAULT_RENDER_PRIORITY = WebSettings.RenderPriority.HIGH;
@@ -97,10 +97,6 @@ public class TwitterWebView extends WebView {
     @Override
     public void destroy() {
         mInitialized = false;
-        mContext = null;
-        mWebSettings = null;
-        mWebViewClient = null;
-        mWebChromeClient = null;
 
         if (mWebChromeClient != null) {
             mWebChromeClient.destroy();
@@ -109,6 +105,11 @@ public class TwitterWebView extends WebView {
         if (mWebViewClient != null) {
             mWebViewClient.destroy();
         }
+
+        mContext = null;
+        mWebSettings = null;
+        mWebViewClient = null;
+        mWebChromeClient = null;
 
         super.destroy();
     }

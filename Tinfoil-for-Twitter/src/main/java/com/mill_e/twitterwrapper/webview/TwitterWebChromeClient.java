@@ -22,7 +22,11 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.webkit.*;
+import android.webkit.ConsoleMessage;
+import android.webkit.GeolocationPermissions;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
+import android.webkit.WebView;
 import android.widget.FrameLayout;
 import com.mill_e.twitterwrapper.R;
 import com.mill_e.twitterwrapper.util.Logger;
@@ -47,7 +51,8 @@ public class TwitterWebChromeClient extends WebChromeClient {
     /**
      * Constructor.
      *
-     * @param context {@link Context}
+     * @param context
+     *         {@link Context}
      */
     public TwitterWebChromeClient(Context context) {
         mContext = context;
@@ -66,34 +71,30 @@ public class TwitterWebChromeClient extends WebChromeClient {
     }
 
     /**
-     * Allow web applications to access this device's location.<br/>
-     * Need
+     * Allow web applications to access this device's location.<br/> Need
      *
-     * @param allow {@link boolean} flag stating whether or not to allow
-     *              this web application to see the
-     *              device's location.
+     * @param allow
+     *         {@link boolean} flag stating whether or not to allow this web application to see the device's location.
      */
     public void setAllowGeolocation(boolean allow) {
         mAllowGeolocation = allow;
     }
 
     /**
-     * Allow web applications to access this device's location.<br/>
-     * Need
+     * Allow web applications to access this device's location.<br/> Need
      *
-     * @param allow {@link boolean} flag stating whether or not to allow
-     *              this web application to see the
-     *              device's location.
+     * @param allow
+     *         {@link boolean} flag stating whether or not to allow this web application to see the device's location.
      */
     public void setAllowFileUpload(boolean allow) {
         mAllowFileUpload = allow;
     }
 
     /**
-     * Set the custom view that can be used to add other views.
-     * For example, this could be used for video playback.
+     * Set the custom view that can be used to add other views. For example, this could be used for video playback.
      *
-     * @param view {@link FrameLayout}
+     * @param view
+     *         {@link FrameLayout}
      */
     public void setCustomContentView(FrameLayout view) {
         mCustomContentView = view;
@@ -105,17 +106,14 @@ public class TwitterWebChromeClient extends WebChromeClient {
      * @return {@link boolean}
      */
     public boolean isCustomViewVisible() {
-        if (mCustomContentView != null) {
-            return (mCustomContentView.getVisibility() == View.VISIBLE);
-        } else {
-            return false;
-        }
+        return mCustomContentView != null && (mCustomContentView.getVisibility() == View.VISIBLE);
     }
 
     /**
      * Set the listener for this WebChromeClient.
      *
-     * @param listener {@link WebChromeClientListener}.
+     * @param listener
+     *         {@link WebChromeClientListener}.
      */
     public void setListener(WebChromeClientListener listener) {
         // Set the listener
@@ -213,8 +211,6 @@ public class TwitterWebChromeClient extends WebChromeClient {
     @Override
     public void onGeolocationPermissionsShowPrompt(String origin,
                                                    GeolocationPermissions.Callback callback) {
-        super.onGeolocationPermissionsShowPrompt(origin, callback);
-
         // If we are not allowed to use geolocation, show an alert, if possible.
         if (!mAllowGeolocation) {
             if (mListener != null) {
@@ -227,14 +223,53 @@ public class TwitterWebChromeClient extends WebChromeClient {
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void onGeolocationPermissionsHidePrompt() {
+        if (mListener != null) {
+            mListener.hideGeolocationAlert();
+        }
+    }
+
+    /**
+     * Handle file upload. Used for backwards compatibility.
+     *
+     * @param uploadMsg
+     *         A ValueCallback to set the URI of the file to upload. onReceiveValue must be called to wake up the
+     *         thread.
+     */
+    @SuppressWarnings("unused")
+    public void openFileChooser(ValueCallback<Uri> uploadMsg) {
+        openFileChooser(uploadMsg, "", "");
+    }
+
+    /**
+     * Handle file upload. Used for backwards compatibility.
+     * <p/>
+     * See {@link #openFileChooser(android.webkit.ValueCallback, String, String)}
+     *
+     * @param uploadMsg
+     *         A ValueCallback to set the URI of the file to upload. onReceiveValue must be called to wake up the
+     *         thread.
+     * @param acceptType
+     *         The value of the 'accept' attribute of the input tag associated with this file picker.
+     */
+    @SuppressWarnings("unused")
+    public void openFileChooser(ValueCallback<Uri> uploadMsg, String acceptType) {
+        openFileChooser(uploadMsg, acceptType, "");
+    }
+
+    /**
      * Tell the client to open a file chooser.
      *
-     * @param uploadMsg  A ValueCallback to set the URI of the file to upload.
-     *                   onReceiveValue must be called to wake up the thread.
-     * @param acceptType The value of the 'accept' attribute of the input tag
-     *                   associated with this file picker.
-     * @param capture    The value of the 'capture' attribute of the input tag
-     *                   associated with this file picker.
+     * @param uploadMsg
+     *         A ValueCallback to set the URI of the file to upload. onReceiveValue must be called to wake up the
+     *         thread.
+     * @param acceptType
+     *         The value of the 'accept' attribute of the input tag associated with this file picker.
+     * @param capture
+     *         The value of the 'capture' attribute of the input tag associated with this file picker.
      */
     public void openFileChooser(ValueCallback<Uri> uploadMsg, String acceptType, String capture) {
         // Fire off the callback
@@ -244,68 +279,87 @@ public class TwitterWebChromeClient extends WebChromeClient {
     }
 
     /**
-     * Handle file upload. Used for backwards compatibility.
-     * <p/>
-     * See {@link #openFileChooser(android.webkit.ValueCallback, String, String)}
+     * Tell the client to open a file chooser.
      *
-     * @param uploadMsg  A ValueCallback to set the URI of the file to upload.
-     *                   onReceiveValue must be called to wake up the thread.
-     * @param acceptType The value of the 'accept' attribute of the input tag
-     *                   associated with this file picker.
+     * @param filePathCallback
+     *         {@link ValueCallback} used to set the list of URI(s) of the file(s) to upload. onReceiveValue must be
+     *         called to wake up the thread.
+     * @param fileChooserParams
+     *         {@link FileChooserParams} parameters used for the file chooser
+     * @return {@link boolean} true if the file chooser will be opened, false if not
      */
     @SuppressWarnings("unused")
-    public void openFileChooser(ValueCallback<Uri> uploadMsg, String acceptType) {
-        openFileChooser(uploadMsg, acceptType, "");
+    public boolean openFileChooser(ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
+        // Fire off the callback
+        return mListener != null && mAllowFileUpload
+                && mListener.openFileChooser(filePathCallback, fileChooserParams);
     }
 
     /**
-     * Handle file upload. Used for backwards compatibility.
-     *
-     * @param uploadMsg A ValueCallback to set the URI of the file to upload.
-     *                  onReceiveValue must be called to wake up the thread.
+     * {@inheritDoc}
      */
-    @SuppressWarnings("unused")
-    public void openFileChooser(ValueCallback<Uri> uploadMsg) {
-        openFileChooser(uploadMsg, "", "");
+    @Override
+    public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback,
+                                     FileChooserParams fileChooserParams) {
+        return openFileChooser(filePathCallback, fileChooserParams);
     }
 
     /**
-     * Listener interface used to fire callbacks for progress changed
-     * and opening a file chooser for file upload.
+     * Listener interface used to fire callbacks for progress changed and opening a file chooser for file upload.
      */
     public interface WebChromeClientListener {
 
         /**
          * Called anytime the progress of the page being loaded changes.
          *
-         * @param view     {@link WebView} where the page is being loaded.
-         * @param progress {@link int} progress.
+         * @param view
+         *         {@link WebView} where the page is being loaded.
+         * @param progress
+         *         {@link int} progress.
          */
         void onProgressChanged(WebView view, int progress);
 
         /**
-         * Called anytime the web site is trying to access geolocation
-         * data and this client is not allowing us to use it. Use this
-         * to show an alert to the user in the case they want to enable
-         * the use of geolocation.
+         * Called anytime the web site is trying to access geolocation data and this client is not allowing us to use
+         * it. Use this to show an alert to the user in the case they want to enable the use of geolocation.
          */
         void showGeolocationDisabledAlert();
 
         /**
-         * This method will be called anytime the file chooser
-         * has to be opened in order to upload a file.<br/>
-         * Must call {@link #setAllowFileUpload(boolean)} and set
-         * the value to true before trying this.
+         * Called when the website that had previously requested access to geolocation data no longer needs it.
+         */
+        void hideGeolocationAlert();
+
+        /**
+         * This method will be called anytime the file chooser has to be opened in order to upload a file.
+         * <p/>
+         * Must call {@link #setAllowFileUpload(boolean)} and set the value to true before trying this.
          *
-         * @param uploadMsg  A ValueCallback to set the URI of the file to upload.
-         *                   onReceiveValue must be called to wake up the thread.
-         * @param acceptType The value of the 'accept' attribute of the input tag
-         *                   associated with this file picker.
-         * @param capture    The value of the 'capture' attribute of the input tag
-         *                   associated with this file picker.
+         * @param uploadMsg
+         *         A ValueCallback to set the URI of the file to upload. onReceiveValue must be called to wake up the
+         *         thread.
+         * @param acceptType
+         *         The value of the 'accept' attribute of the input tag associated with this file picker.
+         * @param capture
+         *         The value of the 'capture' attribute of the input tag associated with this file picker.
          */
         void openFileChooser(ValueCallback<Uri> uploadMsg,
                              String acceptType, String capture);
+
+        /**
+         * This method will be called anytime the file chooser has to be opened when uploading a file.
+         * <p/>
+         * Must call {@link #setAllowFileUpload(boolean)} and set the value to true before trying this.
+         *
+         * @param filePathCallback
+         *         {@link ValueCallback} used to set the list of URI(s) of the file(s) to upload. onReceiveValue must be
+         *         called to wake up the thread.
+         * @param fileChooserParams
+         *         {@link FileChooserParams} parameters used for the file chooser
+         * @return {@link boolean} true if the file chooser will be opened, false if not
+         */
+        boolean openFileChooser(ValueCallback<Uri[]> filePathCallback,
+                                FileChooserParams fileChooserParams);
 
     }
 

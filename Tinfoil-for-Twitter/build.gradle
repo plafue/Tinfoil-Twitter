@@ -1,27 +1,26 @@
+apply plugin: 'com.android.application'
+
 buildscript {
     repositories {
         mavenCentral()
     }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:0.9.+'
-    }
 }
-apply plugin: 'android'
 
 dependencies {
-    compile 'com.android.support:support-v4:+'
+    compile 'com.android.support:support-v4:21.+'
+    compile 'com.squareup.picasso:picasso:2.3.3'
 }
 
 android {
-    compileSdkVersion 19
-    buildToolsVersion "19.0.3"
+    compileSdkVersion rootProject.ext.compileSdkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
 
     defaultConfig {
-        versionCode 20140805
-        versionName "1.4"
+        versionCode 20150205
+        versionName "1.7.5"
 
-        minSdkVersion 14
-        targetSdkVersion 19
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
     }
 
     signingConfigs {
@@ -36,12 +35,12 @@ android {
     buildTypes {
 
         debug {
-            runProguard false
+            minifyEnabled false
             debuggable true
         }
 
         release {
-            runProguard false
+            minifyEnabled false
             debuggable false
             signingConfig signingConfigs.release
         }
@@ -49,7 +48,9 @@ android {
     }
 
     lintOptions {
-        checkReleaseBuilds false
+        disable 'ExtraTranslation'
+        disable 'MissingTranslation'
+        abortOnError false
     }
 
 }

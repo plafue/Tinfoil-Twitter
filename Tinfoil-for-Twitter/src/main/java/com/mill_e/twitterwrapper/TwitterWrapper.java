@@ -28,6 +28,7 @@ public class TwitterWrapper extends BaseTwitterWebViewActivity {
     // Constant
     private final static String LOG_TAG = "TwitterWrapper";
     private final static int MENU_DRAWER_GRAVITY = GravityCompat.END;
+    protected final static int DELAY_RESTORE_STATE = (60 * 1000) * 30;
 
     // Members
     private DrawerLayout mDrawerLayout = null;
@@ -76,7 +77,17 @@ public class TwitterWrapper extends BaseTwitterWebViewActivity {
         // If we have a valid URL that was shared to us, open the sharer
         if (sharedUrl != null) {
             if (!sharedUrl.equals("")) {
-                String formattedSharedUrl = String.format(INIT_URL_DESKTOP + URL_PAGE_SHARE_LINKS,
+                // Check if the URL being shared is a proper web URL
+                if (!sharedUrl.startsWith("http://") || !sharedUrl.startsWith("https://")) {
+                    // if it's not, let's see if it includes a URL in it (prefixed with a message)
+                    int startUrlIndex = sharedUrl.indexOf("http:");
+                    if (startUrlIndex > 0) {
+                        // Seems like it's prefixed with a message, let's trim the start and get the URL only
+                        sharedUrl = sharedUrl.substring(startUrlIndex);
+                    }
+                }
+
+                String formattedSharedUrl = String.format(mDomainToUse + URL_PAGE_SHARE_LINKS,
                         sharedUrl, sharedSubject);
                 Logger.d(LOG_TAG, "Loading the sharer page...");
                 loadNewPage(Uri.parse(formattedSharedUrl).toString());
@@ -92,16 +103,27 @@ public class TwitterWrapper extends BaseTwitterWebViewActivity {
             return;
         }
 
-        // Attempt to either restore the activity or open the default page
+        boolean loadInitialPage = true;
+
         if (savedInstanceState != null) {
-            // Restore the state of the WebView using the saved instance state
-            Logger.d(LOG_TAG, "Restoring the WebView state");
-            restoreWebView(savedInstanceState);
-        } else {
+            long savedStateTime = savedInstanceState.getLong(KEY_SAVE_STATE_TIME, -1);
+            if (savedStateTime > 0) {
+                long timeDiff = System.currentTimeMillis() - savedStateTime;
+                if ((mWebView != null) && (timeDiff < DELAY_RESTORE_STATE)) {
+                    // Restore the state of the WebView using the saved instance state
+                    Logger.d(LOG_TAG, "Restoring the WebView state");
+                    restoreWebView(savedInstanceState);
+                    loadInitialPage = false;
+                }
+            }
+        }
+
+        if (loadInitialPage) {
             // Load the URL depending on the type of device or preference
             Logger.d(LOG_TAG, "Loading the init Twitter URL");
             loadNewPage(mDomainToUse);
         }
+
     }
 
     /**
@@ -136,7 +158,7 @@ public class TwitterWrapper extends BaseTwitterWebViewActivity {
         findViewById(R.id.menu_drawer_right).setOnClickListener(buttonsListener);
         findViewById(R.id.menu_item_jump_to_top).setOnClickListener(buttonsListener);
         findViewById(R.id.menu_item_refresh).setOnClickListener(buttonsListener);
-        findViewById(R.id.menu_item_home).setOnClickListener(buttonsListener);
+        findViewById(R.id.menu_item_newsfeed).setOnClickListener(buttonsListener);
         findViewById(R.id.menu_items_notifications).setOnClickListener(buttonsListener);
         findViewById(R.id.menu_item_messages).setOnClickListener(buttonsListener);
         findViewById(R.id.menu_share_this).setOnClickListener(buttonsListener);
@@ -208,7 +230,7 @@ public class TwitterWrapper extends BaseTwitterWebViewActivity {
         String proxyHost = mSharedPreferences.getString(TwitterPreferences.KEY_PROXY_HOST, null);
         String proxyPort = mSharedPreferences.getString(TwitterPreferences.KEY_PROXY_PORT, null);
 
-        // Set the flags for loading URLs and allowing geolocation, and loading images
+        // Set the flags for loading URLs, allowing geolocation and loading network images
         setAllowCheckins(allowCheckins);
         setAllowAnyDomain(anyDomain);
         setBlockImages(blockImages);
@@ -233,6 +255,7 @@ public class TwitterWrapper extends BaseTwitterWebViewActivity {
         String mode = mSharedPreferences.getString(TwitterPreferences.SITE_MODE,
                 TwitterPreferences.SITE_MODE_AUTO);
 
+        // TODO: time to fix this mess
         // Force or detect the site mode to load
         if (mode.equalsIgnoreCase(TwitterPreferences.SITE_MODE_MOBILE)) {
             // Force the webview config to mobile
@@ -280,7 +303,7 @@ public class TwitterWrapper extends BaseTwitterWebViewActivity {
         }
 
         // Set the user agent depending on config
-        setUserAgent(force, mobile);
+        setUserAgent(force, mobile, false);
     }
 
     /**
@@ -325,15 +348,15 @@ public class TwitterWrapper extends BaseTwitterWebViewActivity {
                 case R.id.menu_item_refresh:
                     refreshCurrentPage();
                     break;
-                case R.id.menu_item_home:
+                case R.id.menu_item_newsfeed:
                     loadNewPage(mDomainToUse);
                     break;
                 case R.id.menu_items_notifications:
                     loadNewPage(mDomainToUse + mNotifications);
                     break;
                 case R.id.menu_item_messages:
-                	loadNewPage(mDomainToUse + URL_PAGE_MESSAGES);
-                	break;
+                    loadNewPage(mDomainToUse + URL_PAGE_MESSAGES);
+                    break;
                 case R.id.menu_share_this:
                     shareCurrentPage();
                     break;

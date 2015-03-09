@@ -16,24 +16,34 @@
 
 package com.mill_e.twitterwrapper.activity;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.support.annotation.NonNull;
 import android.text.TextUtils;
+import android.view.ContextMenu;
 import android.view.KeyEvent;
+import android.view.MenuItem;
 import android.view.View;
 import android.webkit.CookieSyncManager;
 import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.widget.FrameLayout;
@@ -45,8 +55,12 @@ import com.mill_e.twitterwrapper.util.WebViewProxyUtil;
 import com.mill_e.twitterwrapper.webview.TwitterWebChromeClient;
 import com.mill_e.twitterwrapper.webview.TwitterWebView;
 import com.mill_e.twitterwrapper.webview.TwitterWebViewClient;
+import android.widget.Toast;
+import com.squareup.picasso.Picasso;
+import com.squareup.picasso.Target;
 
 import java.io.File;
+import java.io.FileOutputStream;
 
 /**
  * Base activity that uses a {@link com.mill_e.twitterwrapper.webview.TwitterWebView} to load the Facebook
@@ -64,6 +78,9 @@ public abstract class BaseTwitterWebViewActivity extends Activity implements
     // Constants
     private final static String LOG_TAG = "BaseTwitterWebViewActivity";
     protected final static int RESULT_CODE_FILE_UPLOAD = 1001;
+    protected final static int RESULT_CODE_FILE_UPLOAD_LOLLIPOP = 2001;
+    protected static final String KEY_SAVE_STATE_TIME = "_instance_save_state_time";
+    private static final int ID_CONTEXT_MENU_SAVE_IMAGE = 2981279;
     protected final static String INIT_URL_MOBILE = "https://m.twitter.com";
     protected final static String INIT_URL_DESKTOP = "https://www.twitter.com";
     protected final static String URL_MOBILE_PAGE_NOTIFICATIONS = "/i/connect";
@@ -81,8 +98,10 @@ public abstract class BaseTwitterWebViewActivity extends Activity implements
     protected static final String USER_AGENT_MOBILE_OLD = "Mozilla/5.0 (Linux; U; Android 2.3.3; en-gb; " +
             "Nexus S Build/GRI20) AppleWebKit/533.1 (KHTML, like Gecko) Version/4.0 Mobile Safari/533.1";
     // Mobile user agent (Mobile user agent from a Google Nexus 5 running Android 4.4.2
-    protected static final String USER_AGENT_MOBILE = "Mozilla/5.0 (Linux; Android 4.4.2; Nexus 5 Build/KOT49H) " +
-            "AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/30.0.0.0 Mobile Safari/537.36";
+    protected static final String USER_AGENT_MOBILE = "Mozilla/5.0 (Linux; Android 5.0; Nexus 5 Build/LRX21O) " +
+            "AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/37.0.0.0 Mobile Safari/537.36";
+    // Firefox for Android user agent, it brings up a basic version of the site. Halfway between touch site and zero site.
+    protected static final String USER_AGENT_BASIC = "Mozilla/5.0 (Android; Mobile; rv:13.0) Gecko/13.0 Firefox/13.0";
 
     // Members
     protected ConnectivityManager mConnectivityManager = null;
@@ -91,7 +110,9 @@ public abstract class BaseTwitterWebViewActivity extends Activity implements
     protected ProgressBar mProgressBar = null;
     protected WebSettings mWebSettings = null;
     protected ValueCallback<Uri> mUploadMessage = null;
+    protected ValueCallback<Uri[]> mUploadMessageLollipop = null;
     private boolean mCreatingActivity = true;
+    private String mPendingImageUrlToSave = null;
 
     /**
      * BroadcastReceiver to handle ConnectivityManager.CONNECTIVITY_ACTION intent action.
@@ -149,14 +170,13 @@ public abstract class BaseTwitterWebViewActivity extends Activity implements
 
         // Set the database path for this WebView so that
         // HTML5 Storage API works properly
-        File directory = getFilesDir();
-        if (directory != null) {
-            mWebSettings.setDatabaseEnabled(true);
-            mWebSettings.setDatabasePath(directory.getAbsolutePath() + "/");
-        }
+        mWebSettings.setAppCacheEnabled(true);
+        mWebSettings.setDatabaseEnabled(true);
 
         // Create a CookieSyncManager instance and keep a reference of it
         mCookieSyncManager = CookieSyncManager.createInstance(this);
+
+        registerForContextMenu(mWebView);
 
         // Have the activity open the proper URL
         onWebViewInit(savedInstanceState);
@@ -201,11 +221,15 @@ public abstract class BaseTwitterWebViewActivity extends Activity implements
         // Un-register the connectivity changed receiver
         unregisterReceiver(mConnectivityReceiver);
 
-        if (mWebView != null) { mWebView.onPause(); }
+        if (mWebView != null) {
+            // Pass lifecycle events to the WebView
+            mWebView.onPause();
+        }
 
-        // Stop synchronizing the CookieSyncManager
-        if (mCookieSyncManager != null) { mCookieSyncManager.stopSync(); }
-
+        if (mCookieSyncManager != null) {
+            // Stop synchronizing the CookieSyncManager
+            mCookieSyncManager.stopSync();
+        }
 
         super.onPause();
     }
@@ -214,7 +238,10 @@ public abstract class BaseTwitterWebViewActivity extends Activity implements
      * {@inheritDoc}
      */
     @Override
-    protected void onSaveInstanceState(Bundle outState) {
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        // Save the current time to the state bundle
+        outState.putLong(KEY_SAVE_STATE_TIME, System.currentTimeMillis());
+
         // Save the state of the WebView as a Bundle to the Instance State
         mWebView.saveState(outState);
         super.onSaveInstanceState(outState);
@@ -227,6 +254,35 @@ public abstract class BaseTwitterWebViewActivity extends Activity implements
     public void onConfigurationChanged(Configuration newConfig) {
         // Handle orientation configuration changes
         super.onConfigurationChanged(newConfig);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void onCreateContextMenu(ContextMenu menu, View view, ContextMenu.ContextMenuInfo menuInfo) {
+        WebView.HitTestResult result = mWebView.getHitTestResult();
+        switch (result.getType()) {
+            case WebView.HitTestResult.IMAGE_TYPE:
+                showLongPressedImageMenu(menu, result.getExtra());
+                break;
+            case WebView.HitTestResult.SRC_ANCHOR_TYPE:
+                showLongPressedLinkMenu(menu, result.getExtra());
+                break;
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean onContextItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case ID_CONTEXT_MENU_SAVE_IMAGE:
+                saveImageToDisk(mPendingImageUrlToSave);
+                break;
+        }
+        return super.onContextItemSelected(item);
     }
 
     /**
@@ -265,15 +321,17 @@ public abstract class BaseTwitterWebViewActivity extends Activity implements
      *               true if we should use a custom user agent for mobile devices,
      *               false if not.
      */
-    protected void setUserAgent(boolean force, boolean mobile) {
-        if (force && mobile) {
+    protected void setUserAgent(boolean force, boolean mobile, boolean facebookBasic) {
+        if (force && mobile && !facebookBasic) {
             if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.JELLY_BEAN_MR2) {
                 mWebSettings.setUserAgentString(USER_AGENT_MOBILE_OLD);
             } else {
                 mWebSettings.setUserAgentString(USER_AGENT_MOBILE);
             }
-        } else if (force && !mobile) {
+        } else if (force && !mobile && !facebookBasic) {
             mWebSettings.setUserAgentString(USER_AGENT_DESKTOP);
+        } else if (force && mobile && facebookBasic) {
+            mWebSettings.setUserAgentString(USER_AGENT_BASIC);
         } else {
             mWebSettings.setUserAgentString(null);
         }
@@ -358,6 +416,33 @@ public abstract class BaseTwitterWebViewActivity extends Activity implements
     }
 
     /**
+     * Show a context menu to allow the user to perform actions specifically related to the link they just long pressed
+     * on.
+     *
+     * @param menu
+     *         {@link ContextMenu}
+     * @param url
+     *         {@link String}
+     */
+    private void showLongPressedLinkMenu(ContextMenu menu, String url) {
+        // TODO: needs to be implemented, add ability to open site with external browser
+    }
+
+    /**
+     * Show a context menu to allow the user to perform actions specifically related to the image they just long pressed
+     * on.
+     *
+     * @param menu
+     *         {@link ContextMenu}
+     * @param imageUrl
+     *         {@link String}
+     */
+    private void showLongPressedImageMenu(ContextMenu menu, String imageUrl) {
+        mPendingImageUrlToSave = imageUrl;
+        menu.add(0, ID_CONTEXT_MENU_SAVE_IMAGE, 0, getString(R.string.lbl_save_image));
+    }
+
+    /**
      * This is to be used in case we want to force kill the activity.
      * Might not be necessary, but it's here in case we'd like to use it.
      */
@@ -408,6 +493,7 @@ public abstract class BaseTwitterWebViewActivity extends Activity implements
     /**
      * {@inheritDoc}
      */
+    @SuppressLint("NewApi")
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
         switch (requestCode) {
@@ -422,6 +508,14 @@ public abstract class BaseTwitterWebViewActivity extends Activity implements
                         : intent.getData();
                 mUploadMessage.onReceiveValue(result);
                 mUploadMessage = null;
+                break;
+            case RESULT_CODE_FILE_UPLOAD_LOLLIPOP:
+                if (null == mUploadMessageLollipop) {
+                    return;
+                }
+                mUploadMessageLollipop.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode,
+                        intent));
+                mUploadMessageLollipop = null;
                 break;
         }
     }
@@ -442,22 +536,35 @@ public abstract class BaseTwitterWebViewActivity extends Activity implements
         }
     }
 
+    private AlertDialog mLocationAlertDialog = null;
+
     /**
      * {@inheritDoc}
      */
     @Override
     public void showGeolocationDisabledAlert() {
-        AlertDialog alertDialog = new AlertDialog.Builder(this).create();
-        alertDialog.setTitle(getString(R.string.lbl_dialog_alert));
-        alertDialog.setMessage(getString(R.string.txt_checkins_disables));
-        alertDialog.setButton(DialogInterface.BUTTON_NEUTRAL,
+        mLocationAlertDialog = new AlertDialog.Builder(this).create();
+        mLocationAlertDialog.setTitle(getString(R.string.lbl_dialog_alert));
+        mLocationAlertDialog.setMessage(getString(R.string.txt_checkins_disables));
+        mLocationAlertDialog.setButton(DialogInterface.BUTTON_NEUTRAL,
                 getString(R.string.lbl_dialog_ok),
                 new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
                         // Don't do anything here, simply close the dialog
                     }
                 });
-        alertDialog.show();
+        mLocationAlertDialog.show();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void hideGeolocationAlert() {
+        if ((mLocationAlertDialog != null) && mLocationAlertDialog.isShowing()) {
+            mLocationAlertDialog.dismiss();
+            mLocationAlertDialog = null;
+        }
     }
 
     /**
@@ -474,6 +581,27 @@ public abstract class BaseTwitterWebViewActivity extends Activity implements
                 Intent.createChooser(i,
                         getString(R.string.upload_file_choose)),
                 RESULT_CODE_FILE_UPLOAD);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @SuppressLint("NewApi")
+    @Override
+    public boolean openFileChooser(ValueCallback<Uri[]> filePathCallback,
+                                   WebChromeClient.FileChooserParams fileChooserParams) {
+        try {
+            Logger.d(LOG_TAG, "openFileChooser()");
+            mUploadMessageLollipop = filePathCallback;
+            startActivityForResult(
+                    Intent.createChooser(fileChooserParams.createIntent(),
+                            getString(R.string.upload_file_choose)),
+                    RESULT_CODE_FILE_UPLOAD_LOLLIPOP);
+            return true;
+        } catch (ActivityNotFoundException e) {
+            mUploadMessageLollipop = null;
+            return false;
+        }
     }
 
     /**
@@ -505,7 +633,6 @@ public abstract class BaseTwitterWebViewActivity extends Activity implements
         // that handles this URL
         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
         startActivity(intent);
-
         // Hack: Facebook uses a linker helper, it's blank when coming back to app
         // from an outside link, so let's attempt to go back to avoid this blank page
         if (mWebView.canGoBack()) {
@@ -528,6 +655,72 @@ public abstract class BaseTwitterWebViewActivity extends Activity implements
             }
         }
         return super.onKeyDown(keyCode, event);
+    }
+
+    /**
+     * Save the image on the specified URL to disk
+     *
+     * @param imageUrl
+     *         {@link String}
+     */
+    private void saveImageToDisk(String imageUrl) {
+        if (imageUrl != null) {
+            Picasso.with(this).load(imageUrl).into(saveImageTarget);
+        }
+    }
+
+    private Target saveImageTarget = new Target() {
+        @Override
+        public void onBitmapLoaded(Bitmap bitmap, Picasso.LoadedFrom loadedFrom) {
+            (new SaveImageTask()).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, bitmap);
+        }
+
+        @Override
+        public void onBitmapFailed(Drawable drawable) {
+            Toast.makeText(BaseTwitterWebViewActivity.this, getString(R.string.txt_save_image_failed),
+                    Toast.LENGTH_LONG).show();
+        }
+
+        @Override
+        public void onPrepareLoad(Drawable drawable) {
+            // Not implemented
+        }
+    };
+
+    private class SaveImageTask extends AsyncTask<Bitmap, Void, Boolean> {
+
+        @Override
+        protected Boolean doInBackground(Bitmap... images) {
+            Bitmap bitmap = images[0];
+            File directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            File imageFile = new File(directory, System.currentTimeMillis() + ".jpg");
+            try {
+                if (imageFile.createNewFile()) {
+                    FileOutputStream ostream = new FileOutputStream(imageFile);
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 75, ostream);
+                    ostream.close();
+
+                    // Ping the media scanner
+                    sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(imageFile)));
+
+                    return true;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return false;
+        }
+
+        @Override
+        protected void onPostExecute(Boolean result) {
+            if (result) {
+                Toast.makeText(BaseTwitterWebViewActivity.this, getString(R.string.txt_save_image_success),
+                        Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(BaseTwitterWebViewActivity.this, getString(R.string.txt_save_image_failed),
+                        Toast.LENGTH_LONG).show();
+            }
+        }
     }
 
 }

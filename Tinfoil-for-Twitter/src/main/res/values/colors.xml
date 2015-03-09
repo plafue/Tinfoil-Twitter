@@ -25,4 +25,8 @@
     <color name="mild_gray">#888888</color>
     <color name="dark_gray">#555555</color>
 
+    <color name="blue_primary">#3B5998</color>
+    <color name="blue_primary_dark">#ff293c68</color>
+    <color name="blue_accent">#738ffe</color>
+
 </resources>
