@@ -89,7 +89,7 @@ public abstract class BaseTwitterWebViewActivity extends Activity implements
 
     // URL for Sharing Links
     // u = url & t = title
-    protected final static String URL_PAGE_SHARE_LINKS = "/intent/tweet?url=%s&text=\"%s\"";
+    protected final static String URL_PAGE_SHARE_LINKS = "/share";
 
     // Desktop user agent (Google Chrome's user agent from a MacBook running 10.9.1
     protected static final String USER_AGENT_DESKTOP = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_1) " +
@@ -100,8 +100,6 @@ public abstract class BaseTwitterWebViewActivity extends Activity implements
     // Mobile user agent (Mobile user agent from a Google Nexus 5 running Android 4.4.2
     protected static final String USER_AGENT_MOBILE = "Mozilla/5.0 (Linux; Android 5.0; Nexus 5 Build/LRX21O) " +
             "AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/37.0.0.0 Mobile Safari/537.36";
-    // Firefox for Android user agent, it brings up a basic version of the site. Halfway between touch site and zero site.
-    protected static final String USER_AGENT_BASIC = "Mozilla/5.0 (Android; Mobile; rv:13.0) Gecko/13.0 Firefox/13.0";
 
     // Members
     protected ConnectivityManager mConnectivityManager = null;
@@ -321,17 +319,15 @@ public abstract class BaseTwitterWebViewActivity extends Activity implements
      *               true if we should use a custom user agent for mobile devices,
      *               false if not.
      */
-    protected void setUserAgent(boolean force, boolean mobile, boolean facebookBasic) {
-        if (force && mobile && !facebookBasic) {
+    protected void setUserAgent(boolean force, boolean mobile) {
+        if (force && mobile) {
             if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.JELLY_BEAN_MR2) {
                 mWebSettings.setUserAgentString(USER_AGENT_MOBILE_OLD);
             } else {
                 mWebSettings.setUserAgentString(USER_AGENT_MOBILE);
             }
-        } else if (force && !mobile && !facebookBasic) {
+        } else if (force) {
             mWebSettings.setUserAgentString(USER_AGENT_DESKTOP);
-        } else if (force && mobile && facebookBasic) {
-            mWebSettings.setUserAgentString(USER_AGENT_BASIC);
         } else {
             mWebSettings.setUserAgentString(null);
         }

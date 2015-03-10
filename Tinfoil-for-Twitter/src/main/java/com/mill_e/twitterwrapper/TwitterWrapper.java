@@ -303,7 +303,7 @@ public class TwitterWrapper extends BaseTwitterWebViewActivity {
         }
 
         // Set the user agent depending on config
-        setUserAgent(force, mobile, false);
+        setUserAgent(force, mobile);
     }
 
     /**
