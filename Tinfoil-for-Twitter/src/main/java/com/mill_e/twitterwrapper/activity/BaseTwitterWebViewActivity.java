@@ -628,7 +628,12 @@ public abstract class BaseTwitterWebViewActivity extends Activity implements
         // This link is not for a page on my site, launch another Activity
         // that handles this URL
         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-        startActivity(intent);
+        try {
+            startActivity(intent);
+        } catch (ActivityNotFoundException ex) {
+            return;
+        }
+
         // Hack: Facebook uses a linker helper, it's blank when coming back to app
         // from an outside link, so let's attempt to go back to avoid this blank page
         if (mWebView.canGoBack()) {
