@@ -53,6 +53,7 @@
     <!-- Preferences -->
     <string name="pref_cat_access">Zugriff</string>
     <string name="pref_cat_general">Allgemein</string>
+    <string name="pref_block_annoyances">Lästiges</string>
     <string name="pref_cat_proxy">Proxy</string>
     <string name="prefs_allow_checkins">Einchecken erlauben</string>
     <string name="prefs_allow_checkins_sry">Erlaubt der App, den ungefähren Standort zu benutzen, um mit Facebook einchecken zu können</string>
@@ -66,6 +67,8 @@
     <string name="prefs_mobile_site_sry">Nutzung der Desktop-Version oder verschiedener Mobil-Versionen von Facebook in der App erzwingen.</string>
     <string name="prefs_enable_proxy">Proxy verwenden</string>
     <string name="prefs_enable_proxy_sry">Konfiguriere Proxy-Server für Netzwerkabfragen.</string>
+    <string name="prefs_disable_annoyances">Android bezogene Widgets unterdrücken</string>
+    <string name="prefs_disable_annoyances_sry">\"Adroid App installieren\", \"In der App öffnen\" u.Ä. unterdrücken</string>
     <string name="prefs_proxy_host">Host</string>
     <string name="prefs_proxy_port">Port</string>
 

@@ -154,7 +154,7 @@ public class TwitterWebViewClient extends WebViewClient {
         super.onPageFinished(view, url);
 
         // Fire the callback
-        fireOnPageFinishedListener(url);
+        fireOnPageFinishedListener(view, url);
     }
 
     /**
@@ -171,11 +171,12 @@ public class TwitterWebViewClient extends WebViewClient {
     /**
      * Fire off the onPageLoadFinished callback.
      *
+     * @param view
      * @param url {@link String} The url that just finished loading.
      */
-    private void fireOnPageFinishedListener(String url) {
+    private void fireOnPageFinishedListener(WebView view, String url) {
         if (mListener != null) {
-            mListener.onPageLoadFinished(url);
+            mListener.onPageLoadFinished(view, url);
         }
     }
 
@@ -206,9 +207,10 @@ public class TwitterWebViewClient extends WebViewClient {
         /**
          * Notify the host activity that a page has finished loading.
          *
+         * @param view
          * @param url {@link String} The url that just finished loading.
          */
-        void onPageLoadFinished(String url);
+        void onPageLoadFinished(WebView view, String url);
 
         /**
          * Notify the host activity that it should hand off this URL

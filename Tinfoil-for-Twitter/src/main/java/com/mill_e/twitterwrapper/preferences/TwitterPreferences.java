@@ -46,6 +46,7 @@ public class TwitterPreferences extends PreferenceActivity {
     public final static String KEY_PROXY_HOST = "prefs_proxy_host";
     public final static String KEY_PROXY_PORT = "prefs_proxy_port";
     public final static String SITE_MODE = "prefs_mobile_site";
+    public final static String KEY_BLOCK_ANDROID_ANNOYANCES = "prefs_block_android_annoyances";
     public final static String SITE_MODE_AUTO = "auto";
     public final static String SITE_MODE_MOBILE = "mobile";
     public final static String SITE_MODE_DESKTOP = "desktop";
