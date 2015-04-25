@@ -227,6 +227,7 @@ public class TwitterWrapper extends BaseTwitterWebViewActivity {
         boolean blockImages = mSharedPreferences.getBoolean(TwitterPreferences.BLOCK_IMAGES, false);
         boolean allowCheckins = mSharedPreferences.getBoolean(TwitterPreferences.ALLOW_CHECKINS, false);
         boolean enableProxy = mSharedPreferences.getBoolean(TwitterPreferences.KEY_PROXY_ENABLED, false);
+        boolean blockAndroidRelatedAnnoyances = mSharedPreferences.getBoolean(TwitterPreferences.KEY_BLOCK_ANDROID_ANNOYANCES, false);
         String proxyHost = mSharedPreferences.getString(TwitterPreferences.KEY_PROXY_HOST, null);
         String proxyPort = mSharedPreferences.getString(TwitterPreferences.KEY_PROXY_PORT, null);
 
@@ -234,6 +235,7 @@ public class TwitterWrapper extends BaseTwitterWebViewActivity {
         setAllowCheckins(allowCheckins);
         setAllowAnyDomain(anyDomain);
         setBlockImages(blockImages);
+        setBlockAnnoyances(blockAndroidRelatedAnnoyances);
 
         if (enableProxy && !TextUtils.isEmpty(proxyHost) && !TextUtils.isEmpty(proxyPort)) {
             int proxyPortInt = -1;

@@ -51,6 +51,7 @@
     <!-- Preferences -->
     <string name="pref_cat_access">Twitter access</string>
     <string name="pref_cat_general">General</string>
+    <string name="pref_block_annoyances">Annoyances</string>
     <string name="pref_cat_proxy">Proxy</string>
     <string name="prefs_allow_checkins">Allow Check-ins</string>
     <string name="prefs_allow_checkins_sry">Allows the mobile app to use coarse location in order to check-in to places</string>
@@ -64,6 +65,8 @@
     <string name="prefs_mobile_site_sry">Force the use of the mobile or desktop site</string>
     <string name="prefs_enable_proxy">Enable proxy</string>
     <string name="prefs_enable_proxy_sry">Configure proxy for network requests.</string>
+    <string name="prefs_disable_annoyances">Disable Android related prompts</string>
+    <string name="prefs_disable_annoyances_sry">\"Install Adroid App\", \"Open App\" and similar buttons will be hidden.</string>
     <string name="prefs_proxy_host">Proxy host</string>
     <string name="prefs_proxy_port">Proxy port</string>
     <string name="pref_logcat">System-Logging</string>

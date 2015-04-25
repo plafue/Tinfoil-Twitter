@@ -49,6 +49,7 @@ import android.webkit.WebView;
 import android.widget.FrameLayout;
 import android.widget.ProgressBar;
 import com.mill_e.twitterwrapper.R;
+import com.mill_e.twitterwrapper.util.AnnoyancesRemover;
 import com.mill_e.twitterwrapper.util.Logger;
 import com.mill_e.twitterwrapper.util.OrbotHelper;
 import com.mill_e.twitterwrapper.util.WebViewProxyUtil;
@@ -111,6 +112,8 @@ public abstract class BaseTwitterWebViewActivity extends Activity implements
     protected ValueCallback<Uri[]> mUploadMessageLollipop = null;
     private boolean mCreatingActivity = true;
     private String mPendingImageUrlToSave = null;
+    protected AnnoyancesRemover mAnnoyancesRemover = null;
+    private boolean blockAndroidAnnoyances;
 
     /**
      * BroadcastReceiver to handle ConnectivityManager.CONNECTIVITY_ACTION intent action.
@@ -173,6 +176,8 @@ public abstract class BaseTwitterWebViewActivity extends Activity implements
 
         // Create a CookieSyncManager instance and keep a reference of it
         mCookieSyncManager = CookieSyncManager.createInstance(this);
+
+        mAnnoyancesRemover = new AnnoyancesRemover();
 
         registerForContextMenu(mWebView);
 
@@ -380,6 +385,15 @@ public abstract class BaseTwitterWebViewActivity extends Activity implements
         if (mWebView != null) {
             mWebView.setAllowGeolocation(allow);
         }
+    }
+
+    /**
+     * Used to set wether to block android related elements from twitters mobile-friendly
+     *
+     * @param block {@link boolean} wether to block these elements
+     */
+    protected void setBlockAnnoyances(boolean block) {
+        blockAndroidAnnoyances = block;
     }
 
     /**
@@ -613,9 +627,12 @@ public abstract class BaseTwitterWebViewActivity extends Activity implements
      * {@inheritDoc}
      */
     @Override
-    public void onPageLoadFinished(String url) {
+    public void onPageLoadFinished(WebView view, String url) {
         Logger.d(LOG_TAG, "onPageLoadFinished() -- url: " + url);
         mProgressBar.setVisibility(View.GONE);
+        if (blockAndroidAnnoyances) {
+            mAnnoyancesRemover.removeAnnoyances(view);
+        }
     }
 
     /**

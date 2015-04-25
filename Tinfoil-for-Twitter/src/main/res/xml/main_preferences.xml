@@ -45,6 +45,17 @@
 
     </PreferenceCategory>
     <PreferenceCategory
+        android:key="pref_block_annoyances"
+        android:title="@string/pref_block_annoyances" >
+
+        <CheckBoxPreference
+            android:defaultValue="false"
+            android:key="prefs_block_android_annoyances"
+            android:summary="@string/prefs_disable_annoyances_sry"
+            android:title="@string/prefs_disable_annoyances" />
+
+    </PreferenceCategory>
+    <PreferenceCategory
         android:key="pref_cat_proxy"
         android:title="@string/pref_cat_proxy" >
 
